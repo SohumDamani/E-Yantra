@@ -12,7 +12,7 @@ class Edrone():
 	def __init__(self):
 		rospy.init_node("position_controller")
 
-		self.set_loc = [19.000045,72.000045,4.0000] # to ser the goal location from 0.31 altitude to 3m and than displacement in latitude     
+		self.set_loc = [19.0007046575,71.9998955286,22.1599967919] # to ser the goal location from 0.31 altitude to 3m and than displacement in latitude     
 		self.current_loc=[0.0,0.0,0.0] # to store the current location of drone
 
 		self.error = [0,0,0] # to store the eroor in latitude,longitude,altitude
@@ -93,12 +93,15 @@ class Edrone():
 		self.Iterm[i]=(self.Iterm[i]+self.error[i])*self.ki[i]
 		pid_error= self.kp[i]*self.error[i] + self.Iterm[i] + (self.error[i] - self.prev_error[i])*self.kd[i]
 		return pid_error
-	def pid_p(self): 
+	def pid_p(self):
 
-		#saving altitude in local variable
 
-		#altitude
-		self.error[2]= self.error_calc(self.set_loc[2],self.current_loc[2])
+		#altitude 
+		if(self.current_loc[1]>=(self.set_loc[1]-0.000001)): 
+			adjusted_alt = self.set_loc[2]
+		else:
+			adjusted_alt = self.set_loc[2]+5
+		self.error[2]= self.error_calc(adjusted_alt,self.current_loc[2])
 		self.out_alt = self.pid_error(2)
 		self.altitude_error.data = self.error[2]
 		self.prev_error[2]=self.error[2]
@@ -107,22 +110,20 @@ class Edrone():
 			time.sleep(1)
 
 		#latitude	
-		if(self.current_loc[2]<(self.set_loc[2]+0.2) and self.current_loc[2]>=(self.set_loc[2])): 
+		if(self.current_loc[2]<(adjusted_alt+0.2) and self.current_loc[2]>=(adjusted_alt)): 
 			self.error[0]= self.error_calc(self.set_loc[0],self.current_loc[0])
 			self.out_lat = self.pid_error(0)
 			self.latitude_error.data = self.error[0]
 			self.prev_error[0]=self.error[0]
-
-		#longitude
-		if(self.current_loc[2]<(self.set_loc[2]+0.2) and self.current_loc[2]>=(self.set_loc[2]) and self.current_loc[0]>=(self.set_loc[0]-0.00001)):
-			self.error[1]= self.error_calc(self.set_loc[1],self.current_loc[1])
-			self.out_long = self.pid_error(1)
-			self.longitude_error.data = self.error[1]
-			self.prev_error[1]=self.error[1]
+			#longitude
+			if(self.current_loc[0]>=(self.set_loc[0]-0.000001)):
+				self.error[1]= self.error_calc(self.set_loc[1],self.current_loc[1])
+				self.out_long = self.pid_error(1)
+				self.longitude_error.data = self.error[1]
+				self.prev_error[1]=self.error[1]
 			
 		# to change set point once required altitude and latitude is reached to land the drone on required location
-		if(self.current_loc[1]>=(self.set_loc[1]-0.00001)): 
-			self.set_loc[2]=0.31
+
 
 		self.out_throttle= 1500 + self.out_alt
 		self.out_pitch=1500 + self.out_lat
