@@ -4,17 +4,20 @@ from vitarana_drone.msg import *
 from pid_tune.msg import PidTune
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
+from std_msgs.msg import String
 import rospy
 import time
 import tf
+import numpy as np
 
 class Edrone():
 	def __init__(self):
 		rospy.init_node("position_controller")
 
-		self.set_loc = [19.0007046575,71.9998955286,22.1599967919] # to ser the goal location from 0.31 altitude to 3m and than displacement in latitude     
+		self.set_loc = [19.0007046575, 71.9998955286, 22.1599967919] # to ser the goal location from 0.31 altitude to 3m and than displacement in latitude     
 		self.current_loc=[0.0,0.0,0.0] # to store the current location of drone
 
+		self.alt = 0.0
 		self.error = [0,0,0] # to store the eroor in latitude,longitude,altitude
 		self.out_throttle=0.0 # to store the required throttle speed
 		self.out_pitch=0.0 # to store the required pitch speed
@@ -58,12 +61,22 @@ class Edrone():
 		self.latitude_error_pub = rospy.Publisher('/latitude_error',Float32,queue_size=1) 
 		self.longitude_error_pub = rospy.Publisher('/longitude_error',Float32,queue_size=1) 
 		
+		rospy.Subscriber('/target',String,self.set_location)
 		rospy.Subscriber('/edrone/gps', NavSatFix, self.loc_callback)
 		#rospy.Subscriber('/pid_tuning_altitude',PidTune, self.altitude_set_pid)
 		#rospy.Subscriber('/pid_tuning_pitch', PidTune, self.latitude_set_pid)
 		#rospy.Subscriber('/pid_tuning_roll', PidTune, self.longitude_set_pid)
         	
 
+	def set_location(self,tar):
+		loc = tar.data
+		loc = loc.replace("'","")
+		loc = loc.replace("data:","")
+		seperate = loc.split(",")
+		self.set_loc[0] = float(seperate[0])
+		self.set_loc[1] = float(seperate[1])
+		self.set_loc[2] = float(seperate[2])
+		print self.set_loc
 	def loc_callback(self,msg):
 		self.current_loc[0] = msg.latitude
 		self.current_loc[1] = msg.longitude
@@ -94,8 +107,6 @@ class Edrone():
 		pid_error= self.kp[i]*self.error[i] + self.Iterm[i] + (self.error[i] - self.prev_error[i])*self.kd[i]
 		return pid_error
 	def pid_p(self):
-
-
 		#altitude 
 		if(self.current_loc[1]>=(self.set_loc[1]-0.000001)): 
 			adjusted_alt = self.set_loc[2]
