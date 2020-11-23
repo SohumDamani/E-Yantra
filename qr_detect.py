@@ -43,7 +43,6 @@ class image_proc():
 		for barcode in barcodes:
 			barcodeData = barcode.data.decode("utf-8")
 			self.target.data = barcodeData
-
 			self.target_pub.publish(self.target)
 
 if __name__ == '__main__':
